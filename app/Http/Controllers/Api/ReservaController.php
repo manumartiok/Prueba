@@ -115,7 +115,7 @@ class ReservaController extends Controller
                 GROUP_CONCAT(m.numero ORDER BY m.numero SEPARATOR ', ') AS mesas,
                 COUNT(m.id) AS cantidad_mesas
             FROM reservas r
-            INNER JOIN ubicaciones u ON u.id = r.ubicacion_id
+            INNER JOIN ubicacions u ON u.id = r.ubicacion_id
             INNER JOIN reserva_mesa rm ON rm.reserva_id = r.id
             INNER JOIN mesas m ON m.id = rm.mesa_id
             WHERE r.fecha = ?
