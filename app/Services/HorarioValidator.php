@@ -54,7 +54,7 @@ class HorarioValidator
 
     private function validarAnticipacion(Carbon $fechaHoraInicio): void
     {
-        $minutosDeDiferencia = Carbon::now()->diffInMinutes($fechaHoraInicio, false);
+        $minutosDeDiferencia = ($fechaHoraInicio->timestamp - Carbon::now()->timestamp) / 60;
 
         if ($minutosDeDiferencia < self::ANTICIPACION_MINUTOS) {
             throw new InvalidArgumentException(
