@@ -33,7 +33,7 @@
     <div class="container py-4">
 
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-            <h1 class="h3 mb-0">Reservas</h1>
+            <h1 class="h3 mb-0">Reservar</h1>
             <button class="btn btn-dark" onclick="abrirModalNueva()">
         + Nueva reserva
     </button>
@@ -65,7 +65,7 @@
         <hr class="my-5">
 
         {{-- ===================== LISTADO PUNTO 4 (consume /api/reservas?fecha=) ===================== --}}
-        <h2 class="h4 mb-3">Listado de reservas por fecha </h2>
+        <h2 class="h4 mb-3">Lista de reservas </h2>
         <!-- 
             Esta sección consume GET /api/reservas?fecha=, que trae TODO
             (reserva + ubicación + mesas concatenadas) en una sola consulta SQL con
