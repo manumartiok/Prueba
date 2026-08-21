@@ -69,12 +69,28 @@ class HorarioValidator
         $rango = self::RANGOS[$diaSemana];
 
         $minutosInicio = $fechaHoraInicio->hour * 60 + $fechaHoraInicio->minute;
-        $minutosFin = $minutosInicio + self::DURACION_MINUTOS;
 
-        if ($minutosInicio < $rango['inicio'] || $minutosFin > $rango['fin']) {
+        // Solo se valida que el INICIO este dentro del horario de atencion.
+        // El FIN se recorta automaticamente al cierre (ver calcularHoraFin),
+        // en vez de rechazar la reserva si no entran las 2hs completas.
+        if ($minutosInicio < $rango['inicio'] || $minutosInicio >= $rango['fin']) {
             throw new InvalidArgumentException(
                 'El horario solicitado esta fuera del rango de atencion para ese dia.'
             );
         }
     }
+
+    public function calcularHoraFin(Carbon $fechaHoraInicio): Carbon
+{
+    $diaSemana = $fechaHoraInicio->dayOfWeek;
+    $rango = self::RANGOS[$diaSemana];
+
+    $minutosInicio = $fechaHoraInicio->hour * 60 + $fechaHoraInicio->minute;
+    $minutosFinNormal = $minutosInicio + self::DURACION_MINUTOS;
+    $minutosFinRecortado = min($minutosFinNormal, $rango['fin']);
+
+    $minutosASumar = $minutosFinRecortado - $minutosInicio;
+
+    return $fechaHoraInicio->copy()->addMinutes($minutosASumar);
+}
 }

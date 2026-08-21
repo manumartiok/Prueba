@@ -49,7 +49,7 @@
         <hr class="my-5">
 
         {{-- ===================== LISTADO PUNTO 4 (consume /api/reservas?fecha=) ===================== --}}
-        <h2 class="h4 mb-3">Listado de reservas por fecha (punto 4)</h2>
+        <h2 class="h4 mb-3">Listado de reservas por fecha </h2>
         <!-- <p class="text-muted small">
             Esta sección consume <code>GET /api/reservas?fecha=</code>, que trae TODO
             (reserva + ubicación + mesas concatenadas) en una sola consulta SQL con

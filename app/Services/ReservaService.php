@@ -41,7 +41,7 @@ class ReservaService
         $this->horarioValidator->validar($fechaHoraInicio);
 
         $horaInicio = $fechaHoraInicio->format('H:i:s');
-        $horaFin = $fechaHoraInicio->copy()->addMinutes(HorarioValidator::DURACION_MINUTOS)->format('H:i:s');
+        $horaFin = $this->horarioValidator->calcularHoraFin($fechaHoraInicio)->format('H:i:s');
         $cantidadPersonas = (int) $datos['cantidad_personas'];
 
         // 2. Recorrer ubicaciones en orden de prioridad y buscar una combinacion de mesas
@@ -171,7 +171,7 @@ public function actualizar(Reserva $reserva, array $datos): Reserva
     $this->horarioValidator->validar($fechaHoraInicio);
 
     $horaInicio = $fechaHoraInicio->format('H:i:s');
-    $horaFin = $fechaHoraInicio->copy()->addMinutes(HorarioValidator::DURACION_MINUTOS)->format('H:i:s');
+    $horaFin = $this->horarioValidator->calcularHoraFin($fechaHoraInicio)->format('H:i:s');
     $cantidadPersonas = (int) $datos['cantidad_personas'];
 
     return DB::transaction(function () use ($reserva, $datos, $fechaHoraInicio, $horaInicio, $horaFin, $cantidadPersonas) {
