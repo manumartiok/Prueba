@@ -49,22 +49,24 @@ class DisponibilidadService
      * se solapa con el rango pedido).
      */
     public function mesasLibres(int $ubicacionId, string $fecha, string $horaInicio, string $horaFin): Collection
-    {
-        $todasLasMesas = Mesa::where('ubicacion_id', $ubicacionId)->get();
-        $reservasDelDia = $this->reservasDelDia($ubicacionId, $fecha);
+{
+    $todasLasMesas = Mesa::where('ubicacion_id', $ubicacionId)->get();
+    $reservasDelDia = $this->reservasDelDia($ubicacionId, $fecha);
 
-        $mesaIdsOcupadas = $reservasDelDia
-            ->filter(fn ($reserva) => $this->seSolapan(
-                $reserva['hora_inicio'], $reserva['hora_fin'],
-                $horaInicio, $horaFin
-            ))
-            ->flatMap(fn ($reserva) => $reserva['mesa_ids'])
-            ->unique();
+    $mesaIdsOcupadas = $reservasDelDia
+        ->filter(fn ($reserva) => $this->seSolapan(
+            $reserva['hora_inicio'], $reserva['hora_fin'],
+            $horaInicio, $horaFin
+        ))
+        ->flatMap(fn ($reserva) => $reserva['mesa_ids'])
+        ->unique();
 
-        return $todasLasMesas->reject(
-            fn (Mesa $mesa) => $mesaIdsOcupadas->contains($mesa->id)
-        )->values();
-    }
+    $libres = $todasLasMesas->reject(
+        fn (Mesa $mesa) => $mesaIdsOcupadas->contains($mesa->id)
+    )->values();
+
+    return $libres;
+}
 
     /**
      * Dos rangos horarios se solapan si uno empieza antes de que el otro

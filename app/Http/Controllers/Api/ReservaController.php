@@ -11,12 +11,53 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use InvalidArgumentException;
 use RuntimeException;
+use App\Models\Reserva;
+
 
 class ReservaController extends Controller
 {
-    public function __construct(private ReservaService $reservaService)
-    {
+    public function __construct(
+    private ReservaService $reservaService,
+    private \App\Services\DisponibilidadService $disponibilidadService,
+) {
+}
+
+public function update(ReservaRequest $request, Reserva $reserva): JsonResponse
+{
+    try {
+        $actualizada = $this->reservaService->actualizar($reserva, $request->validated());
+    } catch (InvalidArgumentException $e) {
+        return response()->json(['message' => $e->getMessage()], 422);
+    } catch (RuntimeException $e) {
+        return response()->json(['message' => $e->getMessage()], 409);
     }
+
+    return response()->json([
+        'message' => 'Reserva actualizada.',
+        'reserva' => [
+            'id' => $actualizada->id,
+            'fecha' => $actualizada->fecha->toDateString(),
+            'hora_inicio' => $actualizada->hora_inicio,
+            'hora_fin' => $actualizada->hora_fin,
+            'ubicacion' => $actualizada->ubicacion->nombre,
+            'mesas' => $actualizada->mesas->pluck('numero'),
+            'cantidad_personas' => $actualizada->cantidad_personas,
+        ],
+    ]);
+}
+
+public function destroy(Reserva $reserva): JsonResponse
+{
+    $ubicacionId = $reserva->ubicacion_id;
+    $fecha = $reserva->fecha->toDateString();
+
+    $reserva->mesas()->detach();
+    $reserva->delete();
+
+    $this->disponibilidadService->invalidar($ubicacionId, $fecha);
+
+    return response()->json(['message' => 'Reserva eliminada.']);
+}
 
     /**
      * PUNTO 3: crea una reserva. Recibe fecha, hora y cantidad de personas;
@@ -110,6 +151,7 @@ class ReservaController extends Controller
                 r.hora_fin,
                 r.cantidad_personas,
                 r.cliente_nombre,
+                r.cliente_telefono,
                 u.id   AS ubicacion_id,
                 u.nombre AS ubicacion_nombre,
                 GROUP_CONCAT(m.numero ORDER BY m.numero SEPARATOR ', ') AS mesas,
@@ -119,9 +161,9 @@ class ReservaController extends Controller
             INNER JOIN reserva_mesa rm ON rm.reserva_id = r.id
             INNER JOIN mesas m ON m.id = rm.mesa_id
             WHERE r.fecha = ?
-              AND r.estado = 'confirmada'
+            AND r.estado = 'confirmada'
             GROUP BY r.id, r.fecha, r.hora_inicio, r.hora_fin, r.cantidad_personas,
-                     r.cliente_nombre, u.id, u.nombre
+                    r.cliente_nombre, r.cliente_telefono, u.id, u.nombre
             ORDER BY u.nombre ASC, r.hora_inicio ASC
         ", [$validated['fecha']]);
 
