@@ -50,11 +50,11 @@
 
         {{-- ===================== LISTADO PUNTO 4 (consume /api/reservas?fecha=) ===================== --}}
         <h2 class="h4 mb-3">Listado de reservas por fecha (punto 4)</h2>
-        <p class="text-muted small">
+        <!-- <p class="text-muted small">
             Esta sección consume <code>GET /api/reservas?fecha=</code>, que trae TODO
             (reserva + ubicación + mesas concatenadas) en una sola consulta SQL con
             <code>JOIN</code> + <code>GROUP_CONCAT</code>, sin problema N+1.
-        </p>
+        </p> -->
 
         <div class="row g-3 align-items-end mb-3">
             <div class="col-12 col-md-4">
