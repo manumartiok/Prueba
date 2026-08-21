@@ -35,6 +35,7 @@ class HorarioValidator
         6 => ['inicio' => 22 * 60, 'fin' => 26 * 60],       // sabado 22 a 2AM (+1 dia)
     ];
 
+
     /**
      * Valida que la fecha/hora solicitada este dentro del horario de atencion
      * (incluyendo que la reserva completa, con sus 2hs de duracion, entre

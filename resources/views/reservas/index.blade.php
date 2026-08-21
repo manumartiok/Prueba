@@ -11,14 +11,30 @@
             .mesa-card.libre { border-color: #198754; }
             .mesa-card.ocupada { border-color: #dc3545; opacity: .65; }
             .ubicacion-titulo { letter-spacing: .05em; }
+
+                        /* Cambiar el cursor y filtro del ícono */
+            input[type="date"]::-webkit-calendar-picker-indicator,
+            input[type="time"]::-webkit-calendar-picker-indicator {
+                cursor: pointer;
+                border-radius: 4px;
+                padding: 4px;
+                /* Si tu fondo es oscuro y querés el icono blanco, usá este filtro: */
+                /* filter: invert(1); */
+            }
+
+            /* Efecto hover sobre el ícono */
+            input[type="date"]::-webkit-calendar-picker-indicator:hover,
+            input[type="time"]::-webkit-calendar-picker-indicator:hover {
+                background-color: rgba(0, 0, 0, 0.05);
+            }
         </style>
     </head>
     <body>
     <div class="container py-4">
 
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-            <h1 class="h3 mb-0">Reservas — Restaurante</h1>
-            <button class="btn btn-primary" onclick="abrirModalNueva()">
+            <h1 class="h3 mb-0">Reservas</h1>
+            <button class="btn btn-dark" onclick="abrirModalNueva()">
         + Nueva reserva
     </button>
         </div>
@@ -36,7 +52,7 @@
                         <input type="time" id="horaConsulta" class="form-control">
                     </div>
                     <div class="col-12 col-md-4">
-                        <button class="btn btn-outline-primary w-100" onclick="cargarDisponibilidad()">
+                        <button class="btn btn-outline-dark w-100" onclick="cargarDisponibilidad()">
                             Ver disponibilidad
                         </button>
                     </div>
@@ -50,11 +66,11 @@
 
         {{-- ===================== LISTADO PUNTO 4 (consume /api/reservas?fecha=) ===================== --}}
         <h2 class="h4 mb-3">Listado de reservas por fecha </h2>
-        <!-- <p class="text-muted small">
-            Esta sección consume <code>GET /api/reservas?fecha=</code>, que trae TODO
+        <!-- 
+            Esta sección consume GET /api/reservas?fecha=, que trae TODO
             (reserva + ubicación + mesas concatenadas) en una sola consulta SQL con
-            <code>JOIN</code> + <code>GROUP_CONCAT</code>, sin problema N+1.
-        </p> -->
+            JOIN + GROUP_CONCAT, sin problema N+1.
+         -->
 
         <div class="row g-3 align-items-end mb-3">
             <div class="col-12 col-md-4">
@@ -88,7 +104,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Hora</label>
-                                <input type="time" id="reservaHora" name="hora_inicio" id="reservaHora" class="form-control" required>
+                                <input type="time" id="reservaHora" name="hora_inicio"  class="form-control" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Cantidad de personas</label>
@@ -106,7 +122,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-primary" onclick="guardarReserva()">Confirmar reserva</button>
+                        <button type="button" class="btn btn-dark" onclick="guardarReserva()">Confirmar reserva</button>
                     </div>
                 </div>
             </div>
@@ -278,7 +294,7 @@
                                 <td>${r.cantidad_personas}</td>
                                 <td>${r.mesas}</td>
                                 <td class="text-nowrap">
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditar(reservasCache[${r.id}])">Editar</button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="abrirModalEditar(reservasCache[${r.id}])">Editar</button>
                                     <button class="btn btn-sm btn-outline-danger" onclick="eliminarReserva(${r.id})">Eliminar</button>
                                 </td>
                             </tr>`;
