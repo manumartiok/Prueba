@@ -7,22 +7,19 @@
         <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
         <style>
             body { background: #f7f7f9; }
+            /* estilo de mesas  */
             .mesa-card { transition: transform .1s ease; }
             .mesa-card.libre { border-color: #198754; }
             .mesa-card.ocupada { border-color: #dc3545; opacity: .65; }
             .ubicacion-titulo { letter-spacing: .05em; }
-
-                        /* Cambiar el cursor y filtro del ícono */
+            /* estilo de iconos de reloj y calnedario  */
             input[type="date"]::-webkit-calendar-picker-indicator,
             input[type="time"]::-webkit-calendar-picker-indicator {
                 cursor: pointer;
                 border-radius: 4px;
                 padding: 4px;
-                /* Si tu fondo es oscuro y querés el icono blanco, usá este filtro: */
-                /* filter: invert(1); */
             }
 
-            /* Efecto hover sobre el ícono */
             input[type="date"]::-webkit-calendar-picker-indicator:hover,
             input[type="time"]::-webkit-calendar-picker-indicator:hover {
                 background-color: rgba(0, 0, 0, 0.05);
@@ -39,7 +36,7 @@
     </button>
         </div>
 
-        {{-- ===================== BUSCADOR DE DISPONIBILIDAD (consume /api/disponibilidad) ===================== --}}
+        <!--disponibilidad  -->
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <div class="row g-3 align-items-end">
@@ -64,14 +61,8 @@
 
         <hr class="my-5">
 
-        {{-- ===================== LISTADO PUNTO 4 (consume /api/reservas?fecha=) ===================== --}}
+        <!-- reservas  -->
         <h2 class="h4 mb-3">Lista de reservas </h2>
-        <!-- 
-            Esta sección consume GET /api/reservas?fecha=, que trae TODO
-            (reserva + ubicación + mesas concatenadas) en una sola consulta SQL con
-            JOIN + GROUP_CONCAT, sin problema N+1.
-         -->
-
         <div class="row g-3 align-items-end mb-3">
             <div class="col-12 col-md-4">
                 <label class="form-label">Fecha a listar</label>
@@ -86,7 +77,7 @@
 
         <div id="listadoReservas"></div>
 
-        {{-- ===================== MODAL DE RESERVA ===================== --}}
+        <!-- modal reserva  -->
         <div class="modal fade" id="modalReserva" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -97,6 +88,7 @@
                     <div class="modal-body">
                         <div id="alertaReserva"></div>
                         <form id="formReserva">
+                            <!-- este input hidden funciona para cuando el modal tenga que editar una reserva existente  -->
                             <input type="hidden" name="id" id="reservaId" value="">
                             <div class="mb-3">
                                 <label class="form-label">Fecha</label>
@@ -132,21 +124,26 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
     <script>
-    // La app no tiene login (fuera del alcance), asi que todas las llamadas son directas sin token.
+
+    // contante para no repetir /api 
     const API_BASE = '/api';
 
+    // obtener la fecha con el formato que espera el request 
     function hoyISO() {
         return new Date().toISOString().slice(0, 10);
     }
 
-    // Precarga fecha de hoy en todos los inputs de fecha para agilizar las pruebas manuales
+    // precarga de fechas formateadas
     document.getElementById('fechaConsulta').value = hoyISO();
     document.getElementById('fechaListado').value = hoyISO();
     document.getElementById('reservaFecha').value = hoyISO();
+    // cuando se escribe un telefono elimina todo lo que no sea un numero 
     document.getElementById('reservaTelefono').addEventListener('input', function () {
         this.value = this.value.replace(/[^0-9]/g, '');
     });
 
+
+    // cargamos la disponibilidad de manera asincronica para no bloquear el resto de la web mientras carga los datos traidos de la api 
     async function cargarDisponibilidad() {
         const fecha = document.getElementById('fechaConsulta').value;
         const hora = document.getElementById('horaConsulta').value;

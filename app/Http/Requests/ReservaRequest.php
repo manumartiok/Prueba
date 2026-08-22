@@ -4,14 +4,15 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class ReservaRequest extends FormRequest
-{
+class ReservaRequest extends FormRequest //request para autorizar y validar datos a una reserva
+{   
+    //no hay login, todos usuarios validos  
     public function authorize(): bool
     {
-        // No hay login en el alcance de esta prueba, se autoriza siempre
         return true;
     }
 
+    //reglas de validacion
     public function rules(): array
     {
         return [
@@ -23,6 +24,7 @@ class ReservaRequest extends FormRequest
         ];
     }
 
+    //mensjes personalizados a las validaciones
     public function messages(): array
     {
         return [

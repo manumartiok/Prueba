@@ -9,15 +9,13 @@ class Ubicacion extends Model
 {
     protected $fillable = ['nombre', 'orden'];
 
-    public function mesas(): HasMany
+    public function mesas(): HasMany //1 ubicacion muchas mesas
     {
         return $this->hasMany(Mesa::class);
     }
 
-    /**
-     * Devuelve las ubicaciones ordenadas por prioridad de asignacion (A primero, etc).
-     */
-    public static function enOrdenDePrioridad()
+
+    public static function enOrdenDePrioridad() // devuelve las mesas organizadas por el campo orden
     {
         return static::orderBy('orden')->get();
     }

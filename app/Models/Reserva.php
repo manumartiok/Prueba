@@ -19,16 +19,16 @@ class Reserva extends Model
         'estado',
     ];
 
-    protected $casts = [
+    protected $casts = [ //cast convierte fecha en objeto Carbon
         'fecha' => 'date',
     ];
 
-    public function ubicacion(): BelongsTo
+    public function ubicacion(): BelongsTo  //cada mesa 1 ubicacion
     {
         return $this->belongsTo(Ubicacion::class);
     }
 
-    public function mesas(): BelongsToMany
+    public function mesas(): BelongsToMany //1 reserva muchas mesas
     {
         return $this->belongsToMany(Mesa::class, 'reserva_mesa');
     }

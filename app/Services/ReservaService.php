@@ -5,60 +5,52 @@ namespace App\Services;
 use App\Models\Reserva;
 use App\Models\Ubicacion;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class ReservaService
 {
-    /**
-     * Maximo de mesas que se pueden combinar en una sola reserva, segun consigna.
-     */
+
+    //maximo de mesas por reserva
     public const MAX_MESAS_POR_RESERVA = 3;
 
+    //trae los services para usar sus funciones
     public function __construct(
         private HorarioValidator $horarioValidator,
         private DisponibilidadService $disponibilidadService,
     ) {
+
     }
 
-    /**
-     * Crea una reserva: valida horario, busca ubicacion disponible en orden
-     * de prioridad, arma la combinacion de mesas necesaria, y persiste todo
-     * dentro de una transaccion para evitar condiciones de carrera.
-     *
-     * @param  array{fecha: string, hora_inicio: string, cantidad_personas: int, cliente_nombre?: string, cliente_telefono?: string}  $datos
-     *
-     * @throws \InvalidArgumentException  si el horario no es valido
-     * @throws RuntimeException           si no hay disponibilidad en ninguna ubicacion
-     */
+    //metodo para crear la reserva
     public function crear(array $datos): Reserva
     {
-        $fechaHoraInicio = Carbon::parse($datos['fecha'].' '.$datos['hora_inicio']);
+        $fechaHoraInicio = Carbon::parse($datos['fecha'].' '.$datos['hora_inicio']); //construye la fecha y hora de la reserva
 
-        // 1. Validar horario permitido + anticipacion minima
+        //usa el service para validar la hora
         $this->horarioValidator->validar($fechaHoraInicio);
 
+        //obtenes y formatear datos
         $horaInicio = $fechaHoraInicio->format('H:i:s');
         $horaFin = $this->horarioValidator->calcularHoraFin($fechaHoraInicio)->format('H:i:s');
-        $cantidadPersonas = (int) $datos['cantidad_personas'];
+        $cantidadPersonas = (int) $datos['cantidad_personas']; //convierte el dato a un valor entero "5" a 5 ejemplo
 
-        // 2. Recorrer ubicaciones en orden de prioridad y buscar una combinacion de mesas
-        //    Se usa lockForUpdate dentro de una transaccion para evitar que dos
-        //    requests simultaneos reserven la misma mesa (condicion de carrera).
+
+        //transaccion de datos
         return DB::transaction(function () use ($datos, $fechaHoraInicio, $horaInicio, $horaFin, $cantidadPersonas) {
+            //empieza el bucle devolviendo las ubicaciones con la funcion de orden
             foreach (Ubicacion::enOrdenDePrioridad() as $ubicacion) {
-                $mesasLibres = $this->disponibilidadService->mesasLibres(
+                $mesasLibres = $this->disponibilidadService->mesasLibres(//usa el service de disponibilidad
                     $ubicacion->id,
                     $fechaHoraInicio->toDateString(),
                     $horaInicio,
                     $horaFin
                 );
 
-                $combinacion = $this->buscarCombinacion($mesasLibres, $cantidadPersonas);
+                $combinacion = $this->buscarCombinacion($mesasLibres, $cantidadPersonas); //busca la combinacion entre mesas disponibles y personas
 
-                if ($combinacion !== null) {
+                if ($combinacion !== null) {//si encunetra una combinacion, crea la reserva y la guarda en la DB
                     $reserva = Reserva::create([
                         'ubicacion_id' => $ubicacion->id,
                         'fecha' => $fechaHoraInicio->toDateString(),
@@ -70,10 +62,9 @@ class ReservaService
                         'estado' => 'confirmada',
                     ]);
 
-                    $reserva->mesas()->attach($combinacion->pluck('id'));
+                    $reserva->mesas()->attach($combinacion->pluck('id'));//attach crea el registro  en la tabla pivote
 
-                    // 3. Invalidar cache: la proxima consulta de disponibilidad
-                    //    para esta ubicacion+fecha debe reflejar la mesa recien ocupada.
+                    //se invalida la cache anterior
                     $this->disponibilidadService->invalidar($ubicacion->id, $fechaHoraInicio->toDateString());
 
                     return $reserva->load('mesas', 'ubicacion');
@@ -84,43 +75,35 @@ class ReservaService
         });
     }
 
-    /**
-     * Busca la combinacion mas eficiente de mesas libres cuya capacidad
-     * sumada alcance a la cantidad de personas, respetando el maximo de 3 mesas.
-     *
-     * Estrategia:
-     * 1. Si una sola mesa alcanza, usar la MAS CHICA que alcance (no la mas
-     *    grande disponible), para no desperdiciar mesas grandes en grupos
-     *    chicos y dejarlas libres para reservas que si las necesiten.
-     * 2. Si ninguna mesa sola alcanza, combinar de a 2 y despues de a 3,
-     *    tambien priorizando las mesas mas chicas primero (greedy ascendente).
-     *
-     * SUPUESTO: no se exige que la capacidad combinada sea "exacta", alcanza
-     * con que sea >= a la cantidad de personas pedida.
-     */
-private function buscarCombinacion(Collection $mesasLibres, int $cantidadPersonas): ?Collection
+    //busca la combinacion, primero buscando la mesa mas chica que alcance, despues con 2 y despues con 3, sin cantidad exacta, solo que alcance para la cantidad de personas
+private function buscarCombinacion(Collection $mesasLibres, int $cantidadPersonas): ?Collection //?devuelve Collection si encuentra combinacion, y si no null
 {
-    $elementos = $mesasLibres->values()->all();
+    $elementos = $mesasLibres->values()->all();//reindexa y devuelva la combinacion en un array
     $mejorCombinacion = null;
     $mejorDesperdicio = null;
     $mejorCantidadMesas = null;
 
+    //bucle que genera combinaciones
     foreach ($this->generarSubconjuntos($elementos) as $combinacion) {
-        $cantidadMesas = count($combinacion);
+        $cantidadMesas = count($combinacion);//cuenta la cantidad de combinaciones 
 
+        //solo acepta la combinacion si es distinta a 0 y menor a la constante de mesas
         if ($cantidadMesas === 0 || $cantidadMesas > self::MAX_MESAS_POR_RESERVA) {
             continue;
         }
 
+        //trae la capacidad de lsa mesas y las suma
         $suma = array_sum(array_map(fn ($mesa) => $mesa->capacidad, $combinacion));
 
+        //dice si la capacidad alcanza para las personas
         if ($suma < $cantidadPersonas) {
             continue;
         }
 
+
         $desperdicio = $suma - $cantidadPersonas;
 
-        // Preferimos: menos mesas primero, y a igual cantidad de mesas, menor desperdicio.
+        //busca la mejor combinacion, primero usando la menores mesas, y a igualdad, con menor desperdicio
         $esMejor = $mejorCombinacion === null
             || $cantidadMesas < $mejorCantidadMesas
             || ($cantidadMesas === $mejorCantidadMesas && $desperdicio < $mejorDesperdicio);
@@ -135,35 +118,25 @@ private function buscarCombinacion(Collection $mesasLibres, int $cantidadPersona
     return $mejorCombinacion !== null ? collect($mejorCombinacion) : null;
 }
 
-/**
- * Genera todos los subconjuntos (no vacios) de un array usando mascara de
- * bits: para N elementos hay 2^N - 1 subconjuntos posibles. Con la cantidad
- * de mesas por ubicacion que maneja este sistema (< 10), es instantaneo y
- * mucho mas simple/confiable que una recursion manual.
- */
-private function generarSubconjuntos(array $elementos): \Generator
-{
-    $n = count($elementos);
 
-    for ($mascara = 1; $mascara < (1 << $n); $mascara++) {
+//todas las combinaciones posibles de mesa
+private function generarSubconjuntos(array $elementos): \Generator //Generator hace que se genere las combinaciones 1 a 1 en la memoria
+{
+    $n = count($elementos);//cuenta cuantos elementos hay en el array
+
+    //usa bits para generar todas las combinaciones  mesa 1 001 mesa 2 010 mesa 3 100 mesa 1 + 2 + 3 111 1 + 2 011, etc
+    for ($mascara = 1; $mascara < (1 << $n); $mascara++) { // 1 << $n usa el valor a binario
         $combinacion = [];
         for ($i = 0; $i < $n; $i++) {
             if ($mascara & (1 << $i)) {
                 $combinacion[] = $elementos[$i];
             }
         }
-        yield $combinacion;
+        yield $combinacion; //yield hace que la funcion sea un generador
     }
 }
 
-
-
-    /**
- * Actualiza una reserva existente: re-valida horario y disponibilidad
- * como si fuera una reserva nueva, liberando primero sus propias mesas
- * para no auto-bloquearse. Si no hay lugar para los nuevos datos, se
- * revierte todo (transaccion) y la reserva original queda sin tocar.
- */
+    //cuando se edita una reserva para actualizarla
 public function actualizar(Reserva $reserva, array $datos): Reserva
 {
     $fechaHoraInicio = Carbon::parse($datos['fecha'].' '.$datos['hora_inicio']);
@@ -174,12 +147,14 @@ public function actualizar(Reserva $reserva, array $datos): Reserva
     $horaFin = $this->horarioValidator->calcularHoraFin($fechaHoraInicio)->format('H:i:s');
     $cantidadPersonas = (int) $datos['cantidad_personas'];
 
+    //todo el cambio se hace en 1 transaccion, para que si algo falla, la reserva quede como la original
     return DB::transaction(function () use ($reserva, $datos, $fechaHoraInicio, $horaInicio, $horaFin, $cantidadPersonas) {
+        //se guardan los antiguos datos para invalidar la cache a futuro
         $ubicacionIdVieja = $reserva->ubicacion_id;
         $fechaVieja = $reserva->fecha->toDateString();
 
-        // Libera las mesas actuales ANTES de buscar, para que la propia
-        // reserva no aparezca como "ocupante" de si misma al recalcular.
+        
+        //elimina la relacion a la mesa de la reserva original e invalida la cache
         $reserva->mesas()->detach();
         $this->disponibilidadService->invalidar($ubicacionIdVieja, $fechaVieja);
 
@@ -207,12 +182,10 @@ public function actualizar(Reserva $reserva, array $datos): Reserva
                 $reserva->mesas()->attach($combinacion->pluck('id'));
                 $this->disponibilidadService->invalidar($ubicacion->id, $fechaHoraInicio->toDateString());
 
-                return $reserva->fresh(['mesas', 'ubicacion']);
+                return $reserva->fresh(['mesas', 'ubicacion']);//fresh vuelve a cargar los datos a la DB
             }
         }
 
-        // Si no se encuentra lugar, la excepcion revierte la transaccion
-        // completa (incluido el detach de arriba): la reserva original queda intacta.
         throw new RuntimeException('No hay disponibilidad para el nuevo horario/cantidad de personas solicitada.');
     });
 }

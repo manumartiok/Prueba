@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReservaRequest;
 use App\Services\ReservaService;
+use App\Services\DisponibilidadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use InvalidArgumentException;
 use RuntimeException;
 use App\Models\Reserva;
@@ -18,20 +18,23 @@ class ReservaController extends Controller
 {
     public function __construct(
     private ReservaService $reservaService,
-    private \App\Services\DisponibilidadService $disponibilidadService,
+    private DisponibilidadService $disponibilidadService,
 ) {
 }
 
+//funcion para actualizar una reserva
 public function update(ReservaRequest $request, Reserva $reserva): JsonResponse
 {
+    //usa el service
     try {
-        $actualizada = $this->reservaService->actualizar($reserva, $request->validated());
+        $actualizada = $this->reservaService->actualizar($reserva, $request->validated());//validated hace que los datos que pasen sean los de ReservaRequest
     } catch (InvalidArgumentException $e) {
         return response()->json(['message' => $e->getMessage()], 422);
     } catch (RuntimeException $e) {
         return response()->json(['message' => $e->getMessage()], 409);
     }
 
+    //retorna un json
     return response()->json([
         'message' => 'Reserva actualizada.',
         'reserva' => [
@@ -46,6 +49,7 @@ public function update(ReservaRequest $request, Reserva $reserva): JsonResponse
     ]);
 }
 
+//elimina una reserva, guarda los datos para invalidar la cache
 public function destroy(Reserva $reserva): JsonResponse
 {
     $ubicacionId = $reserva->ubicacion_id;
@@ -59,19 +63,14 @@ public function destroy(Reserva $reserva): JsonResponse
     return response()->json(['message' => 'Reserva eliminada.']);
 }
 
-    /**
-     * PUNTO 3: crea una reserva. Recibe fecha, hora y cantidad de personas;
-     * el sistema resuelve ubicacion y mesas automaticamente.
-     */
+    //crear una reserva
     public function store(ReservaRequest $request): JsonResponse
     {
         try {
             $reserva = $this->reservaService->crear($request->validated());
         } catch (InvalidArgumentException $e) {
-            // errores de horario invalido / anticipacion insuficiente -> 422
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (RuntimeException $e) {
-            // sin disponibilidad en ninguna ubicacion -> 409 Conflict
             return response()->json(['message' => $e->getMessage()], 409);
         }
 
@@ -86,17 +85,10 @@ public function destroy(Reserva $reserva): JsonResponse
                 'mesas' => $reserva->mesas->pluck('numero'),
                 'cantidad_personas' => $reserva->cantidad_personas,
             ],
-        ], 201);
+        ], 201); //201 codigo de estado http, que la peticion fue exitosa y se creo un registro
     }
 
-    /**
-     * Endpoint auxiliar (no pedido explicitamente en la consigna, pero
-     * necesario para el frontend): devuelve, para una fecha+hora dada,
-     * todas las mesas de todas las ubicaciones con su estado libre/ocupada.
-     * Usa el mismo DisponibilidadService (con su cache) que usa la creacion
-     * de reservas, para que el frontend vea exactamente lo mismo que el
-     * sistema usa internamente para decidir.
-     */
+    //mostrar en la vista mesas libres y ocupadas
     public function disponibilidad(Request $request, \App\Services\DisponibilidadService $disponibilidadService): JsonResponse
     {
         $validated = $request->validate([
@@ -104,9 +96,10 @@ public function destroy(Reserva $reserva): JsonResponse
             'hora_inicio' => ['required', 'date_format:H:i'],
         ]);
 
-        $horaInicio = $validated['hora_inicio'].':00';
-        $horaFin = \Carbon\Carbon::parse($horaInicio)
-            ->addMinutes(\App\Services\HorarioValidator::DURACION_MINUTOS)
+        $fechaHoraInicio = \Carbon\Carbon::parse($validated['fecha'].' '.$validated['hora_inicio']);
+        $horaInicio = $fechaHoraInicio->format('H:i:s');
+        $horaFin = (new \App\Services\HorarioValidator())
+            ->calcularHoraFin($fechaHoraInicio)
             ->format('H:i:s');
 
         $resultado = \App\Models\Ubicacion::enOrdenDePrioridad()->map(function ($ubicacion) use ($disponibilidadService, $validated, $horaInicio, $horaFin) {
@@ -120,7 +113,7 @@ public function destroy(Reserva $reserva): JsonResponse
                 'mesas' => $todasLasMesas->map(fn ($mesa) => [
                     'numero' => $mesa->numero,
                     'capacidad' => $mesa->capacidad,
-                    'libre' => $mesasLibresIds->contains($mesa->id),
+                    'libre' => $mesasLibresIds->contains($mesa->id),//si el id de mesas libres coincide con el id de las mesas, devuelve true
                 ]),
             ];
         });
@@ -128,21 +121,18 @@ public function destroy(Reserva $reserva): JsonResponse
         return response()->json(['fecha' => $validated['fecha'], 'hora_inicio' => $validated['hora_inicio'], 'ubicaciones' => $resultado]);
     }
 
-    /**
-     * PUNTO 4: listado de reservas de una fecha, agrupadas por ubicacion y
-     * seccion, mostrando las mesas de cada una, en UNA SOLA consulta SQL
-     * optimizada (evita el problema N+1 de traer las mesas reserva por
-     * reserva).
-     *
-     * Se usa SQL crudo con JOIN + GROUP_CONCAT para traer, en una unica
-     * fila por reserva, el listado de mesas involucradas ya concatenado.
-     */
+
+    //devuelve a la vista la lista de reservas por una fecha, con una sola consulta SQL en lugar de varias consultas.
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'fecha' => ['required', 'date_format:Y-m-d'],
         ]);
 
+        //seleciona los datos de la reserva,  obtiene informacion de ubicacion, devuelve el numero de mesas de la reserva (concat)
+        //cuenta la cantidad de mesas de la reserva (count), a la tabla reservas le da el valor r (from), 
+        //relaciona las tablas con inner join, filtra por fecha (where) y estado (and)
+        //agrupa por reserva (group by) y ordena por ordend e ubicacion (order by)
         $reservas = DB::select("
             SELECT
                 r.id,
@@ -167,8 +157,8 @@ public function destroy(Reserva $reserva): JsonResponse
             ORDER BY u.nombre ASC, r.hora_inicio ASC
         ", [$validated['fecha']]);
 
-        // Se agrupa por ubicacion en PHP (barato, ya son pocas filas) para
-        // devolver una respuesta mas comoda de consumir por el frontend.
+
+        //con collect convertimos el array de select a una coleccion, para agrupar por ubicacion_nombre y mandar a la vista
         $agrupadoPorUbicacion = collect($reservas)->groupBy('ubicacion_nombre');
 
         return response()->json([

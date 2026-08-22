@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('mesas', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ubicacion_id')->constrained('ubicacions')->cascadeOnDelete();
-            $table->unsignedInteger('numero'); // numero de mesa DENTRO de su ubicacion
-            $table->unsignedTinyInteger('capacidad'); // cantidad de personas que entran
+            $table->unsignedInteger('numero'); //numero de mesas en ubicaciones, Integer para maximo de 255 caracteres
+            $table->unsignedTinyInteger('capacidad'); // cantidad de personas por mesas TinyInteger, muchos caracteres
             $table->timestamps();
 
             // no puede haber dos mesas con el mismo numero en la misma ubicacion

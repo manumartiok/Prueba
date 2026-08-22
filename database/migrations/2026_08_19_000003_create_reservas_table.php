@@ -14,18 +14,18 @@ return new class extends Migration
 
             $table->date('fecha');
             $table->time('hora_inicio');
-            $table->time('hora_fin'); // hora_inicio + 2hs, se calcula al crear
+            $table->time('hora_fin'); 
 
             $table->unsignedTinyInteger('cantidad_personas');
             $table->string('cliente_nombre')->nullable();
             $table->string('cliente_telefono')->nullable();
 
-            $table->enum('estado', ['confirmada', 'cancelada'])->default('confirmada');
+            $table->enum('estado', ['confirmada', 'cancelada'])->default('confirmada'); //enum valores permitidos
 
             $table->timestamps();
 
-            // esta es la query mas frecuente: "dame reservas de esta fecha en esta ubicacion"
-            $table->index(['fecha', 'ubicacion_id']);
+            
+            $table->index(['fecha', 'ubicacion_id']); //con index busca esos campos en la base de datos en la query
         });
     }
 

@@ -8,16 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // pivote: una reserva puede tener 1 a 3 mesas (union de mesas)
+        // tabla pivote entre reservas y mesas
         Schema::create('reserva_mesa', function (Blueprint $table) {
             $table->id();
             $table->foreignId('reserva_id')->constrained('reservas')->cascadeOnDelete();
             $table->foreignId('mesa_id')->constrained('mesas')->cascadeOnDelete();
             $table->timestamps();
 
-            $table->unique(['reserva_id', 'mesa_id']);
-            // clave para detectar solapamientos rapido por mesa
-            $table->index('mesa_id');
+            $table->unique(['reserva_id', 'mesa_id']); //reserva unica por mesa
+            
+            $table->index('mesa_id'); //para encontrar rapido la mesa en la base de datos
         });
     }
 

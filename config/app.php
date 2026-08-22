@@ -65,6 +65,7 @@ return [
     |
     */
 
+    // para que los horarios coincidan con los horarios de argentina 
     'timezone' => 'America/Argentina/Buenos_Aires',
 
     /*

@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('ubicacions', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre', 1); // 'A', 'B', 'C', 'D'
-            $table->unsignedTinyInteger('orden'); // define prioridad de asignación (1 = primero)
+            $table->string('nombre'); 
+            $table->unsignedTinyInteger('orden'); 
             $table->timestamps();
         });
     }

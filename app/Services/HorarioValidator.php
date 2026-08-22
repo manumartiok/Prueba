@@ -3,28 +3,18 @@
 namespace App\Services;
 
 use Carbon\Carbon;
-use InvalidArgumentException;
+use InvalidArgumentException; //para los mensajes de errores
 
 class HorarioValidator
 {
-    /**
-     * Duracion fija de cada reserva, segun consigna.
-     */
+
+    //define la duracion de una reserva
     public const DURACION_MINUTOS = 120;
 
-    /**
-     * Minutos minimos de anticipacion para poder reservar.
-     */
+    //minimo de tiempo con el que realizar la reserva
     public const ANTICIPACION_MINUTOS = 15;
 
-    /**
-     * Rangos de atencion por dia de la semana, en minutos desde las 00:00.
-     * El sabado cierra a las 2AM del domingo, por eso el fin (26*60=1560)
-     * supera los 1440 minutos de un dia normal: se representa como
-     * "sabado + 2 horas del dia siguiente" para simplificar los calculos.
-     *
-     * Carbon::dayOfWeek: 0=domingo, 1=lunes ... 6=sabado
-     */
+    //Rango horario de los dias, al usar Carbon ya esta definido la enumeracion por eldia
     private const RANGOS = [
         0 => ['inicio' => 12 * 60, 'fin' => 16 * 60],       // domingo 12 a 16
         1 => ['inicio' => 10 * 60, 'fin' => 24 * 60],       // lunes 10 a 24
@@ -36,51 +26,40 @@ class HorarioValidator
     ];
 
 
-    /**
-     * Valida que la fecha/hora solicitada este dentro del horario de atencion
-     * (incluyendo que la reserva completa, con sus 2hs de duracion, entre
-     * dentro del horario) y que respete los 15 minutos de anticipacion minima.
-     *
-     * SUPUESTO: se asume que la reserva debe terminar (no solo empezar)
-     * dentro del horario de atencion, ya que no tendria sentido operativo
-     * que el local siga atendiendo una mesa despues de cerrar.
-     *
-     * @throws InvalidArgumentException si el horario no es valido
-     */
-    public function validar(Carbon $fechaHoraInicio): void
+    //recibe fecha y hora con Carbon para validar las funciones privadas y determinar si el horario de la reserva es valido
+    public function validar(Carbon $fechaHoraInicio): void //con void no retorna ningun valor, simplemente continua si esta bien, o si esta mal lanza un error
     {
         $this->validarAnticipacion($fechaHoraInicio);
         $this->validarDentroDeHorarioDeAtencion($fechaHoraInicio);
     }
 
+    //se encarga de que al reserva sea con mas de 15 minutos de anticipacion
     private function validarAnticipacion(Carbon $fechaHoraInicio): void
     {
-        $minutosDeDiferencia = ($fechaHoraInicio->timestamp - Carbon::now()->timestamp) / 60;
+        $minutosDeDiferencia = ($fechaHoraInicio->timestamp - Carbon::now()->timestamp) / 60; //calcula diferencia horaria entre la reserva y la hora actual
 
-        if ($minutosDeDiferencia < self::ANTICIPACION_MINUTOS) {
+        if ($minutosDeDiferencia < self::ANTICIPACION_MINUTOS) {//devuelve el mensaje de errores si la diferencia es menor a la constante
             throw new InvalidArgumentException(
                 'La reserva debe hacerse con al menos '.self::ANTICIPACION_MINUTOS.' minutos de anticipacion.'
             );
         }
     }
-
+    //revisa que la reserva sea durante el rango permitido de horario 
     private function validarDentroDeHorarioDeAtencion(Carbon $fechaHoraInicio): void
     {
         $diaSemana = $fechaHoraInicio->dayOfWeek;
-        $rango = self::RANGOS[$diaSemana];
+        $rango = self::RANGOS[$diaSemana]; //self para usar la constante dentro de la clase sin invocar a la clase
 
-        $minutosInicio = $fechaHoraInicio->hour * 60 + $fechaHoraInicio->minute;
+        $minutosInicio = $fechaHoraInicio->hour * 60 + $fechaHoraInicio->minute; //convertir horas a minutos
 
-        // Solo se valida que el INICIO este dentro del horario de atencion.
-        // El FIN se recorta automaticamente al cierre (ver calcularHoraFin),
-        // en vez de rechazar la reserva si no entran las 2hs completas.
-        if ($minutosInicio < $rango['inicio'] || $minutosInicio >= $rango['fin']) {
+        if ($minutosInicio < $rango['inicio'] || $minutosInicio >= $rango['fin']) { //define si el horario de la reserva esta en el rango y si no devuelve el error
             throw new InvalidArgumentException(
                 'El horario solicitado esta fuera del rango de atencion para ese dia.'
             );
         }
     }
 
+    //calcula el final de la reserva
     public function calcularHoraFin(Carbon $fechaHoraInicio): Carbon
 {
     $diaSemana = $fechaHoraInicio->dayOfWeek;
@@ -88,10 +67,10 @@ class HorarioValidator
 
     $minutosInicio = $fechaHoraInicio->hour * 60 + $fechaHoraInicio->minute;
     $minutosFinNormal = $minutosInicio + self::DURACION_MINUTOS;
-    $minutosFinRecortado = min($minutosFinNormal, $rango['fin']);
+    $minutosFinRecortado = min($minutosFinNormal, $rango['fin']);//si el rango horario no da para completar las 2 horas, devuelve la reserva con la hora de cierre
 
     $minutosASumar = $minutosFinRecortado - $minutosInicio;
 
-    return $fechaHoraInicio->copy()->addMinutes($minutosASumar);
+    return $fechaHoraInicio->copy()->addMinutes($minutosASumar);//le suma al horario inicial los minutos de la reserva
 }
 }
