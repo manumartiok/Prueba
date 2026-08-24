@@ -49,16 +49,16 @@ php artisan serve
 
 # Migraciones 
 
- * # tabla de ubicaciones con nombre y orden
+* # tabla de ubicaciones con nombre y orden
 database\migrations\2026_08_19_000001_create_ubicaciones_table.php 
 
-# tabla de mesas relacionada a ubicacion, con un numero y cantidad de personas 
+* # tabla de mesas relacionada a ubicacion, con un numero y cantidad de personas 
 database\migrations\2026_08_19_000002_create_mesas_table.php
 
-# tabla de reservas con informacion del cliente y de la reserva, relacionada a ubicaciones
+* # tabla de reservas con informacion del cliente y de la reserva, relacionada a ubicaciones
 database\migrations\2026_08_19_000003_create_reservas_table.php
 
-# tabla pivot, donde se le asigna la reservar a la mesa
+* # tabla pivot, donde se le asigna la reservar a la mesa
 database\migrations\2026_08_19_000004_create_reserva_mesa_table.php
 
 Mesas y ubicaciones completandose con el seeder
