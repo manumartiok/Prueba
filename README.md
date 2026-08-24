@@ -21,7 +21,7 @@ DB_USERNAME=root
 
 DB_PASSWORD=
 
-CACHE_STORE darle valor "file", para que maneje la cache en la memoria del proyecto y no con la base de datos
+CACHE_STORE=file, para que maneje la cache en la memoria del proyecto y no con la base de datos
 
 # Ejecutar migraciones y seeders
 php artisan migrate --seed
