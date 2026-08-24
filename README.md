@@ -49,7 +49,7 @@ php artisan serve
 
 # Migraciones 
 
-# tabla de ubicaciones con nombre y orden
+ * # tabla de ubicaciones con nombre y orden
 database\migrations\2026_08_19_000001_create_ubicaciones_table.php 
 
 # tabla de mesas relacionada a ubicacion, con un numero y cantidad de personas 
