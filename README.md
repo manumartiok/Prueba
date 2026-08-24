@@ -3,10 +3,10 @@ Sistema de reservas, con manejo de fechas y horarios, y visualizacion de disponi
 
 # Instrucciones para levantar de forma local 
 
-# Instalar dependencias
+* # Instalar dependencias
 composer install
 
-# Configurar variables de entorno
+* # Configurar variables de entorno
 cp .env.example .env
 
 DB_CONNECTION=mysql
@@ -23,10 +23,10 @@ DB_PASSWORD=
 
 CACHE_STORE=file, para que maneje la cache en la memoria del proyecto y no con la base de datos
 
-# Ejecutar migraciones y seeders
+* # Ejecutar migraciones y seeders
 php artisan migrate --seed
 
-# Levantar servidor
+* # Levantar servidor
 php artisan serve
 
 # Logica del proyecto
